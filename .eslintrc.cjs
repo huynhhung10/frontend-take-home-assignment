@@ -59,6 +59,7 @@ module.exports = {
       },
     ],
     'prettier/prettier': 'error',
+    'linebreak-style': ['error', 'unix'],
   },
   overrides: [
     {

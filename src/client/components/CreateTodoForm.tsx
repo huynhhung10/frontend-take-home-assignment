@@ -53,8 +53,15 @@ export const CreateTodoForm = () => {
       />
 
       <button
-        type="button"
+        type="submit"
         disabled={isCreatingTodo}
+        style={{
+          padding: '10px 20px',
+          backgroundColor: 'black',
+          color: 'white',
+          border: 'none',
+          borderRadius: '10px',
+        }}
         onClick={() => {
           createTodo({
             body: todoBody,

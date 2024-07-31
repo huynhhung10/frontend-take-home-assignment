@@ -1,9 +1,15 @@
+/* eslint-disable prettier/prettier */
 import type { SVGProps } from 'react'
 
 import * as Checkbox from '@radix-ui/react-checkbox'
+// import { useState } from 'react'
+import { useAutoAnimate } from '@formkit/auto-animate/react'
+
+
+// import { useQuery, useMutation, useQueryClient } from 'react-query'
+
 
 import { api } from '@/utils/client/api'
-
 /**
  * QUESTION 3:
  * -----------
@@ -62,33 +68,114 @@ import { api } from '@/utils/client/api'
  * Documentation references:
  *  - https://auto-animate.formkit.com
  */
+type StatusFilter = 'all' | 'pending' | 'completed';
+interface TodoListProps {
+  statusFilter: StatusFilter;
+}
+export const TodoList = ({ statusFilter }: TodoListProps) => {
 
-export const TodoList = () => {
+  const animationConfig = {
+    duration: 100,
+    easing: 'ease-in-out',
+    delay: 0,
+  }
+
+  const [parent] = useAutoAnimate(animationConfig)
+
   const { data: todos = [] } = api.todo.getAll.useQuery({
     statuses: ['completed', 'pending'],
   })
 
-  return (
-    <ul className="grid grid-cols-1 gap-y-3">
-      {todos.map((todo) => (
-        <li key={todo.id}>
-          <div className="flex items-center rounded-12 border border-gray-200 px-4 py-3 shadow-sm">
-            <Checkbox.Root
-              id={String(todo.id)}
-              className="flex h-6 w-6 items-center justify-center rounded-6 border border-gray-300 focus:border-gray-700 focus:outline-none data-[state=checked]:border-gray-700 data-[state=checked]:bg-gray-700"
-            >
-              <Checkbox.Indicator>
-                <CheckIcon className="h-4 w-4 text-white" />
-              </Checkbox.Indicator>
-            </Checkbox.Root>
+  // Handle checkbox change
 
-            <label className="block pl-3 font-medium" htmlFor={String(todo.id)}>
-              {todo.body}
-            </label>
-          </div>
-        </li>
-      ))}
-    </ul>
+  const apiContext = api.useContext()
+
+  const updateTodoStatus = api.todoStatus.update.useMutation({
+    onSuccess: () => {
+      apiContext.todo.getAll.refetch()
+    },
+  })
+
+  const handleStatusChange = (todo: { status: "completed" | "pending"; id: number; body: string }) => {
+    updateTodoStatus.mutate({
+      todoId: todo.id,
+      status: todo.status === 'pending' ? 'completed' : 'pending',
+    })
+  }
+
+
+  // Delete todo mutation
+  const { mutate: deleteTodo } = api.todo.delete.useMutation({
+    onSuccess: () => {
+      apiContext.todo.getAll.refetch()// Refetch todos after deleting a todo
+    },
+  })
+  // Handle delete button click
+  const handleDeleteClick = (todoId: number) => {
+    deleteTodo({ id: todoId })
+  }
+
+  const filteredTodos = todos.filter(todo => {
+    if (statusFilter === 'all') { return true }
+    return todo.status === statusFilter
+  })
+
+
+
+  return (
+    <div>
+
+      <ul ref={parent} className="grid grid-cols-1 gap-y-3">
+        {filteredTodos.map((todo) => (
+          <li key={todo.id}>
+            <div
+              className={`flex items-center rounded-12 px-4 py-4 shadow-sm ${todo.status === 'completed' ? 'border-gray-700 bg-gray-100' : 'border-gray-200'
+                }`}
+            >
+              <Checkbox.Root
+                id={String(todo.id)}
+                className={`flex h-6 w-6 items-center justify-center rounded-6 border ${todo.status === 'completed' ? 'border-gray-700 bg-gray-700' : 'border-gray-300'
+                  } focus:outline-none`}
+                checked={todo.status === 'completed'}
+                onCheckedChange={() => handleStatusChange(todo)}
+              >
+                <Checkbox.Indicator>
+                  <CheckIcon
+                    className={`h-4 w-4 ${todo.status === 'completed' ? 'text-white' : 'text-transparent'}`}
+                    style={{
+                      // margin: '0 0 0 200px'
+                    }} />
+                </Checkbox.Indicator>
+
+
+              </Checkbox.Root>
+
+              <label
+                className={`block pl-3 font-medium ${todo.status === 'completed' ? 'line-through text-gray-400' : ''
+                  }`}
+                htmlFor={String(todo.id)}
+              >
+                {todo.body}
+              </label>
+              <button
+                onClick={() => handleDeleteClick(todo.id)}
+                aria-label="Delete todo"
+                className="ml-4 p-2 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-700"
+                style={{
+                  float: 'right',
+                  position: 'absolute',
+                  margin: '0 0 0 350px',
+
+                }}
+              >
+                <XMarkIcon className="h-6 w-6 text-gray-700" />
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+    </div >
   )
 }
 
